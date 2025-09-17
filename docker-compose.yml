@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  postgres_server:
+    image: postgres_db
+    container_name: postgres_server
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - kafka-network
+
+  kafka-1:
+    image: apache/kafka:4.0.0
+    container_name: kafka-1
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: BROKER://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: BROKER://192.168.89.138:9092,CONTROLLER://192.168.89.138:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: BROKER:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: BROKER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@192.168.89.138:9093
+      KAFKA_CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - ./data/kafka-1:/tmp/kraft-combined-logs
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    networks:
+      - kafka-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 192.168.89.138:9092
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: PLAINTEXT
+    ports:
+      - "8080:8080"
+    networks:
+      - kafka-network
+
+  scan_ip:
+    build:
+      context: ./scan_ip
+    container_name: scan_ip
+    depends_on:
+      - kafka-1
+      - postgres_server
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092
+      TOPIC_SCAN: ${TOPIC_SCAN}
+      TOPIC_SCAN_RESULT: ${TOPIC_SCAN_RESULT}
+    volumes:
+      - ./scan_ip/schedule_config.json:/app/schedule_config.json:ro
+    networks:
+      - kafka-network
+
+  scan_full_port:
+    build:
+      context: ./scan_full_port
+    container_name: scan_full_port
+    depends_on:
+      - kafka-1
+      - postgres_server
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092
+      TOPIC_FULL: ${TOPIC_FULL}
+      TOPIC_SCAN_FULL_RESULT: ${TOPIC_SCAN_FULL_RESULT}
+    volumes:
+      - ./scan_full_port/schedule_config.json:/app/schedule_config.json:ro
+    networks:
+      - kafka-network
+
+  screen_ip:
+    build:
+      context: ./screen_ip
+    container_name: screen_ip
+    depends_on:
+      - kafka-1
+      - postgres_server
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      TOPIC_CHECK_PORT: ${TOPIC_CHECK_PORT}
+    volumes:
+      - ./screen_ip/schedule_config.json:/app/schedule_config.json:ro
+      - ./screen_ip/screenshots/:/app/screenshots/
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    networks:
+      - kafka-network
+
+  kafka_producer:
+    build:
+      context: ./producer
+    container_name: kafka_producer
+    depends_on:
+      - kafka-1
+      - postgres_server
+    command: ["python", "scheduler.py"]
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      TOPIC_SCAN: ${TOPIC_SCAN}
+      TOPIC_FULL: ${TOPIC_FULL}
+      TOPIC_CHECK_PORT: ${TOPIC_CHECK_PORT}
+    volumes:
+      - ./producer/schedule_config.json:/app/schedule_config.json:ro
+    networks:
+      - kafka-network
+
+  kafka_write_results:
+    build:
+      context: ./write_results
+    container_name: kafka_write_results
+    depends_on:
+      - kafka-1
+      - postgres_server
+    command: ["python", "scheduler.py"]
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      TOPIC_SCAN_RESULT: ${TOPIC_SCAN_RESULT}
+      TOPIC_SCAN_FULL_RESULT: ${TOPIC_SCAN_FULL_RESULT}
+      TOPIC_CHECK_PORT_RESULTS: ${TOPIC_CHECK_PORT_RESULTS}
+    volumes:
+      - ./write_results/schedule_config.json:/app/schedule_config.json:ro
+    networks:
+      - kafka-network
+
+networks:
+  kafka-network:
+    driver: bridge

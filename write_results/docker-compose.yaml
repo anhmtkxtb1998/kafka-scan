@@ -1,0 +1,19 @@
+services:
+  kafka_write_results:
+    build:
+      context: .
+    container_name: kafka_write_results
+    command: ["python", "scheduler.py"]
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      TOPIC_SCAN_RESULT: ${TOPIC_SCAN_RESULT}
+      TOPIC_SCAN_FULL_RESULT: ${TOPIC_SCAN_FULL_RESULT}
+      TOPIC_CHECK_PORT_RESULTS: ${TOPIC_CHECK_PORT_RESULTS}
+    volumes:
+      - ./schedule_config.json:/app/schedule_config.json:ro
+

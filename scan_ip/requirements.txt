@@ -1,0 +1,5 @@
+psycopg2-binary
+python-nmap
+kafka-python
+python-dotenv
+schedule

@@ -1,0 +1,14 @@
+{
+  "scan_topic": {
+    "script": "producer_scan_ip.py",
+    "interval_minutes": 20
+  }, 
+  "full_scan": {
+    "script": "producer_full_scan.py",
+    "interval_minutes": 20
+  },
+  "check_port": {
+    "script": "producer_check_port.py",
+    "interval_minutes": 40
+  }
+}

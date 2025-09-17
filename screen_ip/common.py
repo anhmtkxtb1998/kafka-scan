@@ -1,0 +1,5 @@
+import os
+try:
+	from screen_ip.config import KAFKA_BOOTSTRAP_SERVERS, TOPIC_CHECK_PORT, TOPIC_CHECK_PORT_RESULTS
+except Exception:
+	from config import KAFKA_BOOTSTRAP_SERVERS, TOPIC_CHECK_PORT, TOPIC_CHECK_PORT_RESULTS

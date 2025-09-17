@@ -1,0 +1,12 @@
+requests
+beautifulsoup4
+psycopg2-binary
+selenium
+easyocr
+numpy==1.26.4
+opencv-python-headless
+Pillow
+openpyxl
+confluent-kafka
+dotenv
+schedule
