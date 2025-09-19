@@ -40,4 +40,6 @@ python scan_vulnerability/scan_vulnerability.py
 ```
 
 The worker prints progress to stdout and publishes results to the configured
-Kafka topic in JSON format.
+Kafka topic in JSON format. Each result contains a `vuln` JSON object with the
+service metadata, NSE script outputs, and the scan arguments used to produce
+the entry.
